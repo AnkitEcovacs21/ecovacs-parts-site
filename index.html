@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ecovacs Parts Lookup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #0f1115;
+      color: #f2f4f8;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+      color: #21d4fd;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    input, select {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #2b2f3a;
+      background: #171a21;
+      color: white;
+      font-size: 14px;
+    }
+
+    input {
+      min-width: 320px;
+    }
+
+    .meta {
+      color: #a8b0bf;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #171a21;
+      border: 1px solid #2b2f3a;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .imgbox {
+      background: #101318;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .imgbox img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .content {
+      padding: 14px;
+    }
+
+    .code {
+      color: #21d4fd;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .label {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .models {
+      font-size: 13px;
+      color: #b8c1d1;
+      margin-bottom: 8px;
+    }
+
+    .status {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .status.in {
+      color: #18d26e;
+    }
+
+    .status.out {
+      color: #ff5c5c;
+    }
+
+    .compat {
+      font-size: 13px;
+      color: #c6ccda;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ecovacs Parts Lookup</h1>
+
+  <div class="toolbar">
+    <input id="search" type="text" placeholder="Search by part code, label, or model" />
+    <select id="statusFilter">
+      <option value="">All Status</option>
+      <option value="In Stock">In Stock</option>
+      <option value="Out of Stock">Out of Stock</option>
+    </select>
+  </div>
+
+  <div class="meta" id="meta">Loading...</div>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const API_URL = "PASTE_YOUR_APPS_SCRIPT_EXEC_URL_HERE";
+    let allParts = [];
+
+    async function loadParts() {
+      const res = await fetch(API_URL, { cache: "no-store" });
+      allParts = await res.json();
+      render();
+    }
+
+    function render() {
+      const q = document.getElementById("search").value.toLowerCase().trim();
+      const statusFilter = document.getElementById("statusFilter").value;
+
+      const filtered = allParts.filter(part => {
+        const code = String(part["Part Code"] || "");
+        const label = String(part["Warehouse Label"] || "");
+        const models = String(part["Compatible Models"] || "");
+        const status = String(part["Status"] || "");
+
+        const matchesSearch =
+          !q ||
+          code.toLowerCase().includes(q) ||
+          label.toLowerCase().includes(q) ||
+          models.toLowerCase().includes(q);
+
+        const matchesStatus =
+          !statusFilter || status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      document.getElementById("meta").textContent = `${filtered.length} parts found`;
+
+      document.getElementById("grid").innerHTML = filtered.map(part => {
+        const code = part["Part Code"] || "";
+        const label = part["Warehouse Label"] || "";
+        const models = part["Compatible Models"] || "";
+        const image = part["image (base64)"] || "";
+        const status = String(part["Status"] || "");
+        const compatibility = part["Compatibility"] || "";
+
+        const statusClass = status.toLowerCase().includes("out") ? "out" : "in";
+
+        return `
+          <div class="card">
+            <div class="imgbox">
+              ${image ? `<img src="${image}" alt="${label}">` : `<span>No image</span>`}
+            </div>
+            <div class="content">
+              <div class="code">${code}</div>
+              <div class="label">${label}</div>
+              <div class="models"><strong>Models:</strong> ${models}</div>
+              <div class="status ${statusClass}">${status}</div>
+              <div class="compat">${compatibility}</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("search").addEventListener("input", render);
+    document.getElementById("statusFilter").addEventListener("change", render);
+
+    loadParts();
+  </script>
+</body>
+</html>
